@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Read Aloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FFF9EE;
+    --page: #FFFFFF;
+    --ink: #2A2340;
+    --ink-soft: #6E6684;
+    --line: #EAE2D2;
+    --plum: #6C3FB5;
+    --plum-deep: #55308F;
+    --sun: #FFD84D;
+    --sun-soft: #FFF1B8;
+    --leaf: #1F9D55;
+    --leaf-soft: #DDF5E6;
+    --coral: #E4553B;
+    --coral-soft: #FDE3DD;
+    --shadow: 0 6px 0 rgba(42,35,64,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1C1830; --page: #2A2340; --ink: #F5EFE4; --ink-soft: #B7AECB;
+      --line: #3D3556; --plum: #A88BE6; --plum-deep: #8E6FD6; --sun: #FFD84D;
+      --sun-soft: #5B4A12; --leaf: #58D08A; --leaf-soft: #1E4A32; --coral: #FF7A63;
+      --coral-soft: #5A2A22; --shadow: 0 6px 0 rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1C1830; --page: #2A2340; --ink: #F5EFE4; --ink-soft: #B7AECB;
+    --line: #3D3556; --plum: #A88BE6; --plum-deep: #8E6FD6; --sun: #FFD84D;
+    --sun-soft: #5B4A12; --leaf: #58D08A; --leaf-soft: #1E4A32; --coral: #FF7A63;
+    --coral-soft: #5A2A22; --shadow: 0 6px 0 rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Andika", "Comic Sans MS", "Trebuchet MS", Verdana, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; cursor: pointer; border: 0; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+  img { max-width: 100%; }
+
+  .screen { display: none; min-height: 100%; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  .wrap { width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 18px; }
+
+  /* ---------- Home ---------- */
+  #home .wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding-top: 40px; }
+  .brand { text-align: center; }
+  .brand h1 { font-size: 40px; line-height: 1.05; margin: 8px 0 6px; font-weight: 700; letter-spacing: -0.5px; }
+  .brand h1 span { display: inline-block; padding: 0 8px; background: linear-gradient(transparent 55%, var(--sun) 55%, var(--sun) 88%, transparent 88%); }
+  .brand p { margin: 0; color: var(--ink-soft); font-size: 17px; }
+  .bookmark { display: inline-block; width: 46px; height: 62px; background: var(--plum); border-radius: 4px 4px 0 0; position: relative; }
+  .bookmark::after { content: ""; position: absolute; left: 0; bottom: -18px; border-left: 23px solid var(--plum); border-right: 23px solid var(--plum); border-bottom: 18px solid transparent; }
+
+  .field label { display: block; font-size: 15px; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input {
+    width: 100%; font: inherit; font-size: 22px; padding: 12px 14px;
+    border: 2px solid var(--line); border-radius: 14px; background: var(--page); color: var(--ink);
+  }
+  .field input:focus { border-color: var(--plum); outline: none; }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 16px 20px; border-radius: 18px; font-size: 20px; font-weight: 700;
+    background: var(--plum); color: #fff; box-shadow: var(--shadow); transition: transform .08s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: none; }
+  .btn.quiet { background: var(--page); color: var(--ink); border: 2px solid var(--line); }
+  .btn.sun { background: var(--sun); color: #3B2E00; }
+  .btn[disabled] { opacity: .5; }
+
+  .notice { background: var(--coral-soft); color: var(--ink); border-radius: 14px; padding: 12px 14px; font-size: 15px; display: none; }
+  .notice.show { display: block; }
+
+  /* ---------- Reading ---------- */
+  #read { height: 100%; height: 100dvh; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px 4px; max-width: 640px; margin: 0 auto; width: 100%; }
+  .topbar .title { font-size: 15px; color: var(--ink-soft); line-height: 1.25; }
+  .topbar .title b { color: var(--ink); display: block; font-size: 16px; }
+  .icon-btn { background: var(--page); border: 2px solid var(--line); color: var(--ink); border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 700; white-space: nowrap; }
+
+  .progress { height: 8px; background: var(--line); border-radius: 99px; margin: 8px 18px 0; max-width: 604px; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0; background: var(--leaf); border-radius: 99px; transition: width .25s; }
+  @media (min-width: 640px) { .progress { margin: 8px auto 0; } }
+
+  .page-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 18px 24px; }
+  .page {
+    max-width: 604px; margin: 0 auto; background: var(--page); border-radius: 22px;
+    padding: 24px 22px 28px; border: 2px solid var(--line);
+    font-size: 24px; line-height: 1.8;
+  }
+  .page .w {
+    display: inline-block; padding: 0 3px; margin: 0 -1px; border-radius: 6px;
+    transition: color .15s, background .15s; color: var(--ink);
+    text-decoration: none; cursor: pointer;
+  }
+  .page .w.now { background: var(--sun-soft); box-shadow: inset 0 -4px 0 var(--sun); }
+  .page .w.ok { color: var(--leaf); }
+  .page .w.miss { color: var(--coral); text-decoration: underline wavy var(--coral); text-decoration-thickness: 2px; }
+  .page .w.try { animation: wobble .35s; background: var(--coral-soft); }
+  .page .w.pop { animation: pop .3s; }
+  @keyframes wobble { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.18)} 100%{transform:scale(1)} }
+  .page .para { margin: 0 0 14px; }
+  .hint { color: var(--ink-soft); font-size: 15px; text-align: center; margin-top: 12px; }
+
+  .scorebar {
+    background: var(--page); border-top: 2px solid var(--line);
+    padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
+  }
+  .scorebar .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; max-width: 604px; margin: 0 auto; }
+  .stat { background: var(--paper); border-radius: 16px; padding: 10px 12px; text-align: center; border: 2px solid var(--line); }
+  .stat .v { font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .stat .l { font-size: 13px; color: var(--ink-soft); }
+  .stat.score { background: var(--plum); color: #fff; border-color: var(--plum); }
+  .stat.score .l { color: rgba(255,255,255,.8); }
+  .stat.streak.hot { background: var(--sun-soft); border-color: var(--sun); }
+  .stat.bump .v { animation: pop .3s; }
+  .mic { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 604px; margin: 10px auto 0; font-size: 14px; color: var(--ink-soft); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .dot.live { background: var(--coral); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.4; transform:scale(.7)} }
+  .toast { position: fixed; top: 14px; left: 50%; transform: translate(-50%, -30px); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 99px; font-weight: 700; opacity: 0; transition: .25s; pointer-events: none; z-index: 10; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Done ---------- */
+  #done .wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; text-align: center; }
+  #done h2 { font-size: 34px; margin: 0; }
+  .big { font-size: 64px; font-weight: 700; color: var(--plum); line-height: 1; }
+  .results { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .results .stat .v { font-size: 26px; }
+  .rank-note { font-size: 18px; background: var(--sun-soft); border-radius: 14px; padding: 12px; }
+  .stars { font-size: 40px; letter-spacing: 4px; }
+
+  /* ---------- Leaderboard ---------- */
+  #board .wrap { gap: 14px; display: flex; flex-direction: column; }
+  #board h2 { font-size: 30px; margin: 4px 0 0; }
+  .lb { list-style: none; margin: 0; padding: 0; background: var(--page); border: 2px solid var(--line); border-radius: 20px; overflow: hidden; }
+  .lb li { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 2px solid var(--line); }
+  .lb li:last-child { border-bottom: 0; }
+  .lb .pos { font-size: 22px; font-weight: 700; color: var(--ink-soft); text-align: center; }
+  .lb li:nth-child(1) .pos, .lb li:nth-child(2) .pos, .lb li:nth-child(3) .pos { color: var(--ink); }
+  .lb .who b { display: block; font-size: 19px; }
+  .lb .who small { color: var(--ink-soft); font-size: 13px; }
+  .lb .pts { font-size: 22px; font-weight: 700; color: var(--plum); }
+  .lb li.mine { background: var(--sun-soft); }
+  .lb .empty { padding: 22px; text-align: center; color: var(--ink-soft); }
+  .tiny { font-size: 13px; color: var(--ink-soft); text-align: center; }
+
+  /* confetti */
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+  .confetti i { position: absolute; top: -12px; width: 10px; height: 14px; border-radius: 2px; animation: fall 2.4s linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: .9; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="confetti" id="confetti"></div>
+
+<!-- HOME -->
+<section class="screen active" id="home">
+  <div class="wrap">
+    <div class="brand">
+      <div class="bookmark"></div>
+      <h1><span>Read Aloud</span></h1>
+      <p>Read the story out loud. Every word you get right turns green.</p>
+    </div>
+    <div class="field">
+      <label for="name">Who's reading today?</label>
+      <input id="name" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words">
+    </div>
+    <div class="notice" id="support-note"></div>
+    <button class="btn" id="start-btn">🎙️ Start a new story</button>
+    <button class="btn quiet" id="board-btn">🏆 Leaderboard</button>
+    <p class="tiny">Tap any word while reading to hear it. Works best in Chrome or Safari with the microphone allowed.</p>
+  </div>
+</section>
+
+<!-- READING -->
+<section class="screen" id="read">
+  <div class="topbar">
+    <div class="title" id="book-title"></div>
+    <button class="icon-btn" id="quit-btn">Stop</button>
+  </div>
+  <div class="progress"><i id="prog"></i></div>
+  <div class="page-scroll" id="scroller">
+    <div class="page" id="page"></div>
+    <p class="hint" id="hint">Read the highlighted word out loud.</p>
+  </div>
+  <div class="scorebar">
+    <div class="row">
+      <div class="stat score" id="stat-score"><div class="v" id="score">0</div><div class="l">score</div></div>
+      <div class="stat streak" id="stat-streak"><div class="v" id="streak">0</div><div class="l">streak</div></div>
+      <div class="stat"><div class="v" id="best">0</div><div class="l">best streak</div></div>
+    </div>
+    <div class="mic"><span class="dot" id="dot"></span><span id="mic-text">Starting microphone…</span><button class="icon-btn" id="skip-btn" style="margin-left:auto">Skip word</button></div>
+  </div>
+</section>
+
+<!-- DONE -->
+<section class="screen" id="done">
+  <div class="wrap">
+    <div class="stars" id="stars"></div>
+    <h2 id="done-title">You finished the story!</h2>
+    <div class="big" id="done-score">0</div>
+    <div class="results">
+      <div class="stat"><div class="v" id="done-acc">0%</div><div class="l">words right</div></div>
+      <div class="stat"><div class="v" id="done-streak">0</div><div class="l">best streak</div></div>
+      <div class="stat"><div class="v" id="done-time">0:00</div><div class="l">time</div></div>
+    </div>
+    <div class="rank-note" id="rank-note"></div>
+    <button class="btn" id="again-btn">📖 Read another story</button>
+    <button class="btn quiet" id="done-board-btn">🏆 See the leaderboard</button>
+  </div>
+</section>
+
+<!-- LEADERBOARD -->
+<section class="screen" id="board">
+  <div class="wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h2>🏆 Leaderboard</h2>
+      <button class="icon-btn" id="board-back">Back</button>
+    </div>
+    <ol class="lb" id="lb"></ol>
+    <p class="tiny">Scores are saved on this device.</p>
+    <button class="btn sun" id="board-start">🎙️ Read a story</button>
+    <button class="btn quiet" id="clear-btn" style="font-size:16px">Clear all scores</button>
+  </div>
+</section>
+
+<script>
+/* ---------------- Public-domain passages ---------------- */
+const PASSAGES = [
+ { book: "The Wonderful Wizard of Oz", author: "L. Frank Baum", text:
+ `Dorothy lived in the midst of the great Kansas prairies, with Uncle Henry, who was a farmer, and Aunt Em, who was the farmer's wife. Their house was small, for the lumber to build it had to be carried by wagon many miles. There were four walls, a floor and a roof, which made one room; and this room contained a rusty looking cookstove, a cupboard for the dishes, a table, three or four chairs, and the beds.
+ Uncle Henry and Aunt Em had a big bed in one corner, and Dorothy a little bed in another corner. There was no garret at all, and no cellar, except a small hole dug in the ground, called a cyclone cellar, where the family could go in case one of those great whirlwinds arose, mighty enough to crush any building in its path.` },
+ { book: "The Wonderful Wizard of Oz", author: "L. Frank Baum", text:
+ `It was Toto that made Dorothy laugh, and saved her from growing as gray as her other surroundings. Toto was not gray; he was a little black dog, with long silky hair and small black eyes that twinkled merrily on either side of his funny, wee nose. Toto played all day long, and Dorothy played with him, and loved him dearly.
+ Today, however, they were not playing. Uncle Henry sat upon the doorstep and looked anxiously at the sky, which was even grayer than usual. Dorothy stood in the door with Toto in her arms, and looked at the sky too. Aunt Em was washing the dishes. From the far north they heard a low wail of the wind, and Uncle Henry and Dorothy could see where the long grass bowed in waves before the coming storm.` },
+ { book: "The Wonderful Wizard of Oz", author: "L. Frank Baum", text:
+ `While Dorothy was looking earnestly into the queer, painted face of the Scarecrow, she was surprised to see one of the eyes slowly wink at her. She thought she must have been mistaken at first, for none of the scarecrows in Kansas ever wink; but presently the figure nodded its head to her in a friendly way. Then she climbed down from the fence and walked up to it, while Toto ran around the pole and barked.
+ "Good day," said the Scarecrow, in a rather husky voice.
+ "Did you speak?" asked the girl, in wonder.
+ "Certainly," answered the Scarecrow. "How do you do?"
+ "I'm pretty well, thank you," replied Dorothy politely. "How do you do?"
+ "I'm not feeling well," said the Scarecrow, with a smile, "for it is very tedious being perched up here night and day to scare away crows."` },
+ { book: "Alice's Adventures in Wonderland", author: "Lewis Carroll", text:
+ `Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, "and what is the use of a book," thought Alice, "without pictures or conversations?"
+ So she was considering in her own mind, as well as she could, for the hot day made her feel very sleepy, whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.
+ There was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, "Oh dear! Oh dear! I shall be late!"` },
+ { book: "The Tale of Peter Rabbit", author: "Beatrix Potter", text:
+ `Once upon a time there were four little Rabbits, and their names were Flopsy, Mopsy, Cotton-tail, and Peter. They lived with their Mother in a sand-bank, underneath the root of a very big fir-tree.
+ "Now, my dears," said old Mrs. Rabbit one morning, "you may go into the fields or down the lane, but don't go into Mr. McGregor's garden. Now run along, and don't get into mischief. I am going out."
+ Then old Mrs. Rabbit took a basket and her umbrella, and went through the wood to the baker's. She bought a loaf of brown bread and five currant buns.
+ Flopsy, Mopsy, and Cotton-tail, who were good little bunnies, went down the lane to gather blackberries; but Peter, who was very naughty, ran straight away to Mr. McGregor's garden, and squeezed under the gate!` },
+ { book: "The Velveteen Rabbit", author: "Margery Williams", text:
+ `There was once a velveteen rabbit, and in the beginning he was really splendid. He was fat and bunchy, as a rabbit should be; his coat was spotted brown and white, he had real thread whiskers, and his ears were lined with pink sateen. On Christmas morning, when he sat wedged in the top of the Boy's stocking, with a sprig of holly between his paws, the effect was charming.
+ There were other things in the stocking, nuts and oranges and a toy engine, and chocolate almonds and a clockwork mouse, but the Rabbit was quite the best of all. For at least two hours the Boy loved him, and then Aunts and Uncles came to dinner, and there was a great rustling of tissue paper and unwrapping of parcels, and in the excitement of looking at all the new presents the Velveteen Rabbit was forgotten.` },
+ { book: "The Wind in the Willows", author: "Kenneth Grahame", text:
+ `The Mole had been working very hard all the morning, spring-cleaning his little home. First with brooms, then with dusters; then on ladders and steps and chairs, with a brush and a pail of whitewash; till he had dust in his throat and eyes, and splashes of whitewash all over his black fur, and an aching back and weary arms.
+ Spring was moving in the air above and in the earth below and around him, penetrating even his dark and lowly little house with its spirit of divine discontent and longing. It was small wonder, then, that he suddenly flung down his brush on the floor, said "Bother!" and "O blow!" and also "Hang spring-cleaning!" and bolted out of the house without even waiting to put on his coat.` },
+ { book: "Black Beauty", author: "Anna Sewell", text:
+ `The first place that I can well remember was a large pleasant meadow with a pond of clear water in it. Some shady trees leaned over it, and rushes and water-lilies grew at the deep end. Over the hedge on one side we looked into a plowed field, and on the other we looked over a gate at our master's house, which stood by the roadside; at the top of the meadow was a grove of fir trees, and at the bottom a running brook overhung by a steep bank.
+ While I was young I lived upon my mother's milk, as I could not eat grass. In the daytime I ran by her side, and at night I lay down close by her. When it was hot we used to stand by the pond in the shade of the trees, and when it was cold we had a nice warm shed near the grove.` },
+ { book: "Peter Pan", author: "J. M. Barrie", text:
+ `All children, except one, grow up. They soon know that they will grow up, and the way Wendy knew was this. One day when she was two years old she was playing in a garden, and she plucked another flower and ran with it to her mother. I suppose she must have looked rather delightful, for Mrs. Darling put her hand to her heart and cried, "Oh, why can't you remain like this for ever!"
+ This was all that passed between them on the subject, but henceforth Wendy knew that she must grow up. You always know after you are two. Two is the beginning of the end.` },
+ { book: "The Jungle Book", author: "Rudyard Kipling", text:
+ `It was seven o'clock of a very warm evening in the Seeonee hills when Father Wolf woke up from his day's rest, scratched himself, yawned, and spread out his paws one after the other to get rid of the sleepy feeling in their tips. Mother Wolf lay with her big gray nose dropped across her four tumbling, squealing cubs, and the moon shone into the mouth of the cave where they all lived.
+ "Augrh!" said Father Wolf. "It is time to hunt again." He was going to spring down hill when a little shadow with a bushy tail crossed the threshold and whined: "Good luck go with you, O Chief of the Wolves. And good luck and strong white teeth go with noble children that they may never forget the hungry in this world."` },
+ { book: "Aesop's Fables", author: "retold", text:
+ `A Hare was making fun of the Tortoise one day for being so slow.
+ "Do you ever get anywhere?" he asked with a mocking laugh.
+ "Yes," replied the Tortoise, "and I get there sooner than you think. I'll run you a race to prove it."
+ The Hare was much amused at the idea of running a race with the Tortoise, but for the fun of the thing he agreed. So the Fox, who had consented to act as judge, marked the distance and started the runners off.
+ The Hare was soon far out of sight, and to make the Tortoise feel very deeply how ridiculous it was for him to try a race with a Hare, he lay down beside the course to take a nap until the Tortoise should catch up.
+ The Tortoise meanwhile kept going slowly but steadily, and, after a time, passed the place where the Hare was sleeping. But the Hare slept on very peacefully; and when at last he did wake up, the Tortoise was near the goal. The Hare now ran his swiftest, but he could not overtake the Tortoise in time.` },
+ { book: "Aesop's Fables", author: "retold", text:
+ `A Lion lay asleep in the forest, his great head resting on his paws. A timid little Mouse came upon him unexpectedly, and in her fright and haste to get away, ran across the Lion's nose. Roused from his nap, the Lion laid his huge paw angrily on the tiny creature to kill her.
+ "Spare me!" begged the poor Mouse. "Please let me go and some day I will surely repay you."
+ The Lion was much amused to think that a Mouse could ever help him. But he was generous and finally let the Mouse go.
+ Some days later, while stalking his prey in the forest, the Lion was caught in the toils of a hunter's net. Unable to free himself, he filled the forest with his angry roaring. The Mouse knew the voice and quickly found the Lion struggling in the net. Running to one of the great ropes that bound him, she gnawed it until it parted, and soon the Lion was free.
+ "You laughed when I said I would repay you," said the Mouse. "Now you see that even a Mouse can help a Lion."` }
+];
+
+/* ---------------- Storage helpers ---------------- */
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+/* ---------------- Word matching ---------------- */
+const NUMS = { one:"1", two:"2", three:"3", four:"4", five:"5", six:"6", seven:"7", eight:"8", nine:"9", ten:"10", zero:"0" };
+const ALIAS = { mister:"mr", missus:"mrs", misses:"mrs", grey:"gray", ok:"okay", "o":"oh" };
+function norm(w) {
+  let s = w.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]/g, "");
+  if (ALIAS[s]) s = ALIAS[s];
+  if (NUMS[s]) s = NUMS[s];
+  return s;
+}
+function lev(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+function isMatch(spoken, target) {
+  if (!spoken || !target) return false;
+  if (spoken === target) return true;
+  // plural / possessive / -ed / -ing leniency
+  if (target.length >= 4 && (spoken === target + "s" || spoken + "s" === target)) return true;
+  const d = lev(spoken, target);
+  if (target.length >= 5 && d <= 1) return true;
+  if (target.length >= 8 && d <= 2) return true;
+  return false;
+}
+
+/* ---------------- State ---------------- */
+const $ = (id) => document.getElementById(id);
+let words = [];          // [{el, norm, state, tries}]
+let ptr = 0;             // index of current word
+let score = 0, streak = 0, best = 0, correct = 0, missed = 0;
+let startTime = 0, sessionActive = false;
+let rec = null, restartTimer = null, speaking = false;
+let interimProcessed = 0;
+let currentPassage = null;
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 1200);
+}
+
+/* ---------------- Speech recognition ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  const n = $("support-note");
+  n.textContent = "This browser can't listen to speech. Please open this page in Chrome (Android) or Safari (iPhone/iPad).";
+  n.classList.add("show");
+  $("start-btn").disabled = true;
+}
+
+function startRec() {
+  if (!SR || !sessionActive || speaking) return;
+  if (rec) { try { rec.abort(); } catch (e) {} }
+  rec = new SR();
+  rec.lang = "en-GB";
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.maxAlternatives = 3;
+  interimProcessed = 0;
+  rec.onstart = () => { $("dot").classList.add("live"); $("mic-text").textContent = "Listening…"; };
+  rec.onresult = onResult;
+  rec.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      $("mic-text").textContent = "Microphone blocked. Allow the microphone and tap Start again.";
+      $("dot").classList.remove("live");
+      sessionActive = false;
+    }
+  };
+  rec.onend = () => {
+    $("dot").classList.remove("live");
+    if (sessionActive && !speaking) {
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(startRec, 250);
+    }
+  };
+  try { rec.start(); } catch (e) {}
+}
+function stopRec() {
+  clearTimeout(restartTimer);
+  if (rec) { try { rec.onend = null; rec.abort(); } catch (e) {} }
+  rec = null;
+  $("dot").classList.remove("live");
+}
+
+function onResult(e) {
+  for (let i = e.resultIndex; i < e.results.length; i++) {
+    const r = e.results[i];
+    // gather spoken tokens (use best alternative; fall back to others for the current word)
+    const alts = [];
+    for (let a = 0; a < r.length; a++) alts.push(r[a].transcript.trim().split(/\s+/).map(norm).filter(Boolean));
+    const spoken = alts[0];
+    let from = r.isFinal ? interimProcessed : interimProcessed;
+    if (spoken.length < from) from = spoken.length; // transcript shrank; nothing new
+    for (let k = from; k < spoken.length; k++) {
+      const next = spoken[k + 1];
+      consume(spoken[k], next, alts.slice(1).map(al => al[k]).filter(Boolean));
+      if (ptr >= words.length) break;
+    }
+    if (r.isFinal) interimProcessed = 0; else interimProcessed = spoken.length;
+    if (ptr >= words.length) { finish(); return; }
+  }
+}
+
+/* Try to place one spoken word against the text */
+let joinBuffer = null; // for hyphenated targets spoken as two words
+function consume(sp, nextSp, altSp) {
+  if (ptr >= words.length) return;
+  const LOOK = 3;
+  // 1. current word
+  if (matchesAny(sp, ptr, altSp)) { markOk(ptr); joinBuffer = null; return; }
+  // 2. two spoken words joined (e.g. "cotton" + "tail" → "cottontail")
+  if (nextSp && isMatch(sp + nextSp, words[ptr].norm)) { joinBuffer = sp; return; }
+  if (joinBuffer && isMatch(joinBuffer + sp, words[ptr].norm)) { markOk(ptr); joinBuffer = null; return; }
+  joinBuffer = null;
+  // 3. skipped ahead a word or two
+  for (let k = 1; k <= LOOK && ptr + k < words.length; k++) {
+    if (matchesAny(sp, ptr + k, altSp)) {
+      for (let j = ptr; j < ptr + k; j++) markMiss(j, false);
+      ptr += k;
+      markOk(ptr);
+      return;
+    }
+  }
+  // 4. ignore very short noise words that don't match anything
+  if (sp.length <= 2) return;
+  // 5. genuine wrong word
+  const w = words[ptr];
+  w.tries++;
+  streak = 0; updateStats(true);
+  w.el.classList.remove("try"); void w.el.offsetWidth; w.el.classList.add("try");
+  if (w.tries >= 2) { markMiss(ptr, true); advance(); toast("Nearly! Keep going"); }
+  else toast("Try that word again");
+}
+function matchesAny(sp, idx, alts) {
+  const t = words[idx].norm;
+  if (isMatch(sp, t)) return true;
+  return alts && alts.some(a => isMatch(a, t));
+}
+
+function markOk(i) {
+  const w = words[i];
+  w.state = "ok"; correct++;
+  w.el.classList.remove("now", "try"); w.el.classList.add("ok", "pop");
+  streak++; best = Math.max(best, streak);
+  const bonus = streak >= 20 ? 20 : streak >= 10 ? 10 : streak >= 5 ? 5 : 0;
+  score += 10 + bonus;
+  if (streak === 5 || streak === 10 || streak === 20) toast(streak === 5 ? "🔥 5 in a row!" : streak === 10 ? "⭐ 10 in a row!" : "🚀 20 in a row!");
+  updateStats(false);
+  ptr = i + 1;
+  setCurrent();
+}
+function markMiss(i, resetStreak) {
+  const w = words[i];
+  if (w.state !== "pending") return;
+  w.state = "miss"; missed++;
+  w.el.classList.remove("now", "try"); w.el.classList.add("miss");
+  if (resetStreak) streak = 0;
+  updateStats(true);
+}
+function advance() { ptr++; setCurrent(); if (ptr >= words.length) finish(); }
+function setCurrent() {
+  document.querySelectorAll(".w.now").forEach(el => el.classList.remove("now"));
+  if (ptr < words.length) {
+    const el = words[ptr].el;
+    el.classList.add("now");
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  $("prog").style.width = (ptr / words.length * 100) + "%";
+}
+function updateStats(streakLost) {
+  $("score").textContent = score;
+  $("streak").textContent = streak;
+  $("best").textContent = best;
+  const ss = $("stat-streak"); ss.classList.toggle("hot", streak >= 5);
+  const sc = $("stat-score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
+}
+
+/* ---------------- Passage selection & rendering ---------------- */
+function pickPassage() {
+  const recent = lsGet("recent", []);
+  let pool = PASSAGES.map((_, i) => i).filter(i => !recent.includes(i));
+  if (!pool.length) pool = PASSAGES.map((_, i) => i);
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  const nr = [idx, ...recent].slice(0, Math.min(6, PASSAGES.length - 1));
+  lsSet("recent", nr);
+  return PASSAGES[idx];
+}
+function render(p) {
+  currentPassage = p;
+  $("book-title").innerHTML = `<b>${p.book}</b>${p.author === "retold" ? "a classic fable" : "by " + p.author}`;
+  const page = $("page"); page.innerHTML = "";
+  words = [];
+  p.text.split(/\n/).map(s => s.trim()).filter(Boolean).forEach(par => {
+    const div = document.createElement("p"); div.className = "para";
+    par.split(/\s+/).forEach((tok, i) => {
+      const n = norm(tok);
+      const span = document.createElement("span");
+      span.className = "w"; span.textContent = tok;
+      if (n) {
+        const w = { el: span, norm: n, state: "pending", tries: 0 };
+        span.addEventListener("click", () => sayWord(tok));
+        words.push(w);
+      }
+      div.appendChild(span);
+      if (i < par.split(/\s+/).length - 1) div.appendChild(document.createTextNode(" "));
+    });
+    page.appendChild(div);
+  });
+}
+
+function sayWord(tok) {
+  if (!("speechSynthesis" in window)) return;
+  speaking = true;
+  stopRec();
+  $("mic-text").textContent = "Saying the word…";
+  const u = new SpeechSynthesisUtterance(tok.replace(/[^\w'’-]/g, ""));
+  u.lang = "en-GB"; u.rate = 0.85;
+  u.onend = u.onerror = () => { speaking = false; setTimeout(startRec, 300); };
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+/* ---------------- Session flow ---------------- */
+/* Ask the browser for the microphone explicitly so the permission prompt appears */
+async function requestMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true; // let SpeechRecognition ask itself
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+    return true;
+  } catch (err) {
+    const n = $("support-note");
+    const framed = window.top !== window.self;
+    n.innerHTML = framed
+      ? `The microphone is blocked while this page is shown inside another page. <button class="icon-btn" id="open-full" style="margin-top:8px">Open in full screen</button> then tap Start again.`
+      : `Microphone access was blocked. In your browser settings, allow the microphone for this page, then tap Start again.`;
+    n.classList.add("show");
+    const b = $("open-full");
+    if (b) b.addEventListener("click", () => window.open(location.href, "_blank"));
+    return false;
+  }
+}
+
+async function startSession() {
+  const name = $("name").value.trim();
+  if (!name) { $("name").focus(); toast("Type your name first"); return; }
+  lsSet("name", name);
+  $("start-btn").textContent = "Asking for the microphone…";
+  const ok = await requestMic();
+  $("start-btn").textContent = "🎙️ Start a new story";
+  if (!ok) { show("home"); return; }
+  $("support-note").classList.remove("show");
+  score = 0; streak = 0; best = 0; correct = 0; missed = 0; ptr = 0; joinBuffer = null;
+  render(pickPassage());
+  updateStats(false);
+  show("read");
+  $("scroller").scrollTop = 0;
+  setCurrent();
+  sessionActive = true;
+  startTime = Date.now();
+  startRec();
+}
+function quitSession() {
+  sessionActive = false; stopRec();
+  if (correct + missed > 0) finish(true); else show("home");
+}
+function finish(early) {
+  sessionActive = false; stopRec();
+  const secs = Math.round((Date.now() - startTime) / 1000);
+  const total = correct + missed;
+  const acc = total ? Math.round(correct / total * 100) : 0;
+  $("done-title").textContent = early ? "Good reading!" : "You finished the story!";
+  $("done-score").textContent = score;
+  $("done-acc").textContent = acc + "%";
+  $("done-streak").textContent = best;
+  $("done-time").textContent = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+  $("stars").textContent = acc >= 95 ? "⭐⭐⭐" : acc >= 80 ? "⭐⭐" : "⭐";
+  const entry = { name: lsGet("name", "Reader"), score, acc, book: currentPassage.book, date: new Date().toISOString().slice(0, 10), id: Date.now() };
+  const board = lsGet("board", []);
+  board.push(entry); board.sort((a, b) => b.score - a.score);
+  lsSet("board", board.slice(0, 20));
+  const rank = board.findIndex(e => e.id === entry.id) + 1;
+  $("rank-note").textContent = rank === 1 ? "🥇 New top score!" : rank <= 3 ? `🏅 Number ${rank} on the leaderboard!` : `You're number ${rank} on the leaderboard.`;
+  show("done");
+  if (!early && acc >= 80) confetti();
+}
+function confetti() {
+  const c = $("confetti"); c.innerHTML = "";
+  const cols = ["#6C3FB5", "#FFD84D", "#1F9D55", "#E4553B", "#4DA3FF"];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.background = cols[i % cols.length];
+    p.style.animationDelay = (Math.random() * 0.8) + "s";
+    p.style.animationDuration = (2 + Math.random() * 1.5) + "s";
+    c.appendChild(p);
+  }
+  setTimeout(() => c.innerHTML = "", 4000);
+}
+
+function renderBoard() {
+  const board = lsGet("board", []);
+  const me = lsGet("name", "");
+  const ol = $("lb"); ol.innerHTML = "";
+  if (!board.length) { ol.innerHTML = `<li class="empty">No scores yet. Read a story to get on the board!</li>`; return; }
+  const medals = ["🥇", "🥈", "🥉"];
+  board.slice(0, 10).forEach((e, i) => {
+    const li = document.createElement("li");
+    if (e.name === me) li.classList.add("mine");
+    li.innerHTML = `<div class="pos">${medals[i] || (i + 1)}</div>
+      <div class="who"><b>${escapeHtml(e.name)}</b><small>${escapeHtml(e.book)} · ${e.acc}% right · ${e.date}</small></div>
+      <div class="pts">${e.score}</div>`;
+    ol.appendChild(li);
+  });
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ---------------- Wire up ---------------- */
+$("name").value = lsGet("name", "");
+$("start-btn").addEventListener("click", startSession);
+$("again-btn").addEventListener("click", startSession);
+$("board-start").addEventListener("click", startSession);
+$("quit-btn").addEventListener("click", quitSession);
+$("skip-btn").addEventListener("click", () => { if (ptr < words.length) { markMiss(ptr, true); advance(); } });
+$("board-btn").addEventListener("click", () => { renderBoard(); show("board"); });
+$("done-board-btn").addEventListener("click", () => { renderBoard(); show("board"); });
+$("board-back").addEventListener("click", () => show("home"));
+$("clear-btn").addEventListener("click", () => { if (confirm("Clear every score on the leaderboard?")) { lsSet("board", []); renderBoard(); } });
+document.addEventListener("visibilitychange", () => { if (document.hidden && sessionActive) stopRec(); else if (sessionActive) startRec(); });
+</script>
+</body>
+</html>
